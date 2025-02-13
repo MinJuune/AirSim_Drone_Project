@@ -9,5 +9,6 @@ __pycache__/
 
 Imitation_Learning.py
 Imitation_Learning_test.py
+setup.py
 setup_path.py
 step3_finetunning.py
