@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+
+
+*.log
+*.zip
+*.npz
+
+Imitation_Learning.py
+Imitation_Learning_test.py
+setup_path.py
+step3_finetunning.py
