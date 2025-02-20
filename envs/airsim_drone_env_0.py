@@ -1,6 +1,7 @@
 import airsim
 import numpy as np
 import gym
+import open3d as o3d
 from gym import spaces
 import config
 
@@ -15,10 +16,19 @@ class AirSimDroneEnv(gym.Env):
         self.client.enableApiControl(True)
         self.client.armDisarm(True)
 
+        # LiDAR 센서 활성화
+        self.lidar_name = "LidarSensor"
+
+        # Open3D 시각화 설정
+        self.vis = o3d.visualization.Visualizer()
+        self.vis.create_window()
+        self.pcd = o3d.geometry.PointCloud()
+        self.vis.add_geometry(self.pcd)
+
         self.observation_space = spaces.Box(
             low=config.OBSERVATION_SPACE_LOW, 
             high=config.OBSERVATION_SPACE_HIGH, 
-            shape=(3,),
+            shape=(100, 3),
             dtype=np.float32
         )
 
@@ -51,6 +61,7 @@ class AirSimDroneEnv(gym.Env):
 
     def close(self):
         """환경 종료 시 클라이언트 연결 해제"""
+        self.vis.destroy_window()
         self.client.armDisarm(False)
         self.client.enableApiControl(False)
         self.client.reset()
@@ -119,7 +130,24 @@ class AirSimDroneEnv(gym.Env):
         return reward, False  # 일반적인 경우 계속 진행
 
     def _get_state(self):
-        """현재 드론 위치 반환"""
+        """현재 드론 위치와 LiDAR 데이터를 반환"""
         multirotor_state = self.client.getMultirotorState()
         pos = multirotor_state.kinematics_estimated.position
-        return np.array([pos.x_val, pos.y_val, pos.z_val], dtype=np.float32)
+        drone_position = np.array([pos.x_val, pos.y_val, pos.z_val], dtype=np.float32)
+
+        # LiDAR 데이터 가져오기
+        lidar_data = self.client.getLidarData(lidar_name=self.lidar_name)
+        if len(lidar_data.point_cloud) < 3:
+            lidar_points = np.zeros((100, 3), dtype=np.float32)  # 데이터 없을 때
+        else:
+            lidar_points = np.array(lidar_data.point_cloud, dtype=np.float32).reshape(-1, 3)
+
+        # Open3D를 활용한 LiDAR 데이터 실시간 시각화
+        self.pcd.points = o3d.utility.Vector3dVector(lidar_points)
+        self.pcd.paint_uniform_color([0, 1, 0])  # 초록색
+        self.vis.update_geometry(self.pcd)
+        self.vis.poll_events()
+        self.vis.update_renderer()
+
+        # 상태: 드론 위치 + LiDAR 데이터
+        return np.concatenate((drone_position.reshape(1, 3), lidar_points[:99]), axis=0)
