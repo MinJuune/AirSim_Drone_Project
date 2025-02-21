@@ -4,6 +4,8 @@ import gym
 import open3d as o3d
 from gym import spaces
 import config
+import os
+import re
 
 # ==========================
 # **드론 환경 클래스 정의**
@@ -17,18 +19,12 @@ class AirSimDroneEnv(gym.Env):
         self.client.armDisarm(True)
 
         # LiDAR 센서 활성화
-        self.lidar_name = "LidarSensor"
-
-        # Open3D 시각화 설정
-        self.vis = o3d.visualization.Visualizer()
-        self.vis.create_window()
-        self.pcd = o3d.geometry.PointCloud()
-        self.vis.add_geometry(self.pcd)
-
+        self.lidar_name = "LidarSensor1"
+        
         self.observation_space = spaces.Box(
             low=config.OBSERVATION_SPACE_LOW, 
             high=config.OBSERVATION_SPACE_HIGH, 
-            shape=(100, 3),
+            shape=(81, 3),
             dtype=np.float32
         )
 
@@ -54,6 +50,7 @@ class AirSimDroneEnv(gym.Env):
         self.client.takeoffAsync().join()
 
         self.step_count = 0
+        self.lidar_data_log = []  # LiDAR 데이터 초기화
         self.step_in_episode = 0
         state = self._get_state()
         print(f"[INFO] 환경 초기화 완료 | 초기 상태: {state}")
@@ -61,7 +58,6 @@ class AirSimDroneEnv(gym.Env):
 
     def close(self):
         """환경 종료 시 클라이언트 연결 해제"""
-        self.vis.destroy_window()
         self.client.armDisarm(False)
         self.client.enableApiControl(False)
         self.client.reset()
@@ -137,17 +133,20 @@ class AirSimDroneEnv(gym.Env):
 
         # LiDAR 데이터 가져오기
         lidar_data = self.client.getLidarData(lidar_name=self.lidar_name)
-        if len(lidar_data.point_cloud) < 3:
-            lidar_points = np.zeros((100, 3), dtype=np.float32)  # 데이터 없을 때
-        else:
-            lidar_points = np.array(lidar_data.point_cloud, dtype=np.float32).reshape(-1, 3)
+        lidar_points = np.array(lidar_data.point_cloud, dtype=np.float32).reshape(-1, 3)
+        
+        # 디버깅: LiDAR 데이터 개수 출력
+        print(f"[DEBUG] 현재 LiDAR 데이터 개수: {lidar_points.shape[0]}")
 
-        # Open3D를 활용한 LiDAR 데이터 실시간 시각화
-        self.pcd.points = o3d.utility.Vector3dVector(lidar_points)
-        self.pcd.paint_uniform_color([0, 1, 0])  # 초록색
-        self.vis.update_geometry(self.pcd)
-        self.vis.poll_events()
-        self.vis.update_renderer()
+        # LiDAR 포인트 개수를 80개로 고정
+        num_points = 80
+        if lidar_points.shape[0] < num_points:
+            padding = np.zeros((num_points - lidar_points.shape[0], 3), dtype=np.float32)
+            lidar_points = np.vstack((lidar_points, padding))
+        elif lidar_points.shape[0] > num_points:
+            lidar_points = lidar_points[:num_points]
 
-        # 상태: 드론 위치 + LiDAR 데이터
-        return np.concatenate((drone_position.reshape(1, 3), lidar_points[:99]), axis=0)
+        # 상태: 드론 위치 (1,3) + LiDAR 데이터 (80,3) = (81,3)
+        return np.concatenate((drone_position.reshape(1, 3), lidar_points), axis=0)
+    
+

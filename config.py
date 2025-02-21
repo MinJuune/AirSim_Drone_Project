@@ -28,7 +28,8 @@ REWARD_MAX_STEP_EXCEED = -50  # 최대 스텝 초과 시 패널티
 REWARD_COLLISION = -50
 
 # 학습 모델 저장 경로
-MODEL_PATH = "ppo_airsim_drone_policy3.zip"
+# MODEL_PATH = "ppo_airsim_drone_policy3.zip" # 이거는 state가 3일때임(x,y,z 위치정보)
+MODEL_PATH = "ppo_airsim_lidar_sensor.zip"
 TOTAL_TIMESTEPS = 128  # 학습할 총 스텝 수
 
 TEST_EPISODE_STEPS = 20  # 테스트 실행 시 반복할 스텝 수
