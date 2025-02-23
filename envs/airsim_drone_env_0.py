@@ -21,6 +21,7 @@ class AirSimDroneEnv(gym.Env):
         # LiDAR 센서 활성화
         self.lidar_name = "LidarSensor1"
         
+        # 관측 공간
         self.observation_space = spaces.Box(
             low=config.OBSERVATION_SPACE_LOW, 
             high=config.OBSERVATION_SPACE_HIGH, 
@@ -28,6 +29,7 @@ class AirSimDroneEnv(gym.Env):
             dtype=np.float32
         )
 
+        # 행동 공간
         self.action_space = spaces.Box(
             low=config.ACTION_SPACE_LOW, 
             high=config.ACTION_SPACE_HIGH, 
@@ -126,14 +128,14 @@ class AirSimDroneEnv(gym.Env):
         return reward, False  # 일반적인 경우 계속 진행
 
     def _get_state(self):
-        """현재 드론 위치와 LiDAR 데이터를 반환"""
+        """현재 드론 위치(x,y,z)와 LiDAR 데이터를 반환"""
         multirotor_state = self.client.getMultirotorState()
         pos = multirotor_state.kinematics_estimated.position
         drone_position = np.array([pos.x_val, pos.y_val, pos.z_val], dtype=np.float32)
 
         # LiDAR 데이터 가져오기
         lidar_data = self.client.getLidarData(lidar_name=self.lidar_name)
-        lidar_points = np.array(lidar_data.point_cloud, dtype=np.float32).reshape(-1, 3)
+        lidar_points = np.array(lidar_data.point_cloud, dtype=np.float32).reshape(-1, 3) #-1을 사용하면 행 개수 자동 계산
         
         # 디버깅: LiDAR 데이터 개수 출력
         print(f"[DEBUG] 현재 LiDAR 데이터 개수: {lidar_points.shape[0]}")
