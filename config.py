@@ -4,7 +4,8 @@ import numpy as np
 # **하이퍼파라미터 설정**
 # ==========================
 # 드론의 목표 위치 및 환경 설정
-TARGET_POSITION = np.array([3, 2, -2])  # 목표 위치
+# TARGET_POSITION = np.array([3, 2, -2])  # 목표 위치
+TARGET_POSITION = np.array([9.95, 0.01, -1.35])  # 두개의 장애물 사이 목표 
 MAX_STEPS = 200  # 한 에피소드당 최대 스텝 수
 SAFE_BOUND = 50  # 안전 경계값 (이 값을 초과하면 종료)
 OBSERVATION_SPACE_LOW = -100  # 관측 공간 최소값
