@@ -7,7 +7,8 @@ from stable_baselines3 import PPO
 from envs.airsim_drone_env_0 import AirSimDroneEnv
 import keyboard
 
-MODEL_PATH = "ppo_airsim_drone_policy3.zip"
+# MODEL_PATH = "ppo_airsim_drone_policy3.zip"
+MODEL_PATH = "weights/ppo_airsim_lidar_sensor.zip"
 MAX_EPISODES = 5  # 여러 번 테스트해서 평균 성능 평가
 MAX_STEPS = 200  # 한 에피소드에서 최대 스텝 수 (무한 루프 방지)
 
@@ -74,7 +75,8 @@ def test():
             obs, reward, done, _ = env.step(action)
 
             # 현재 위치 저장
-            x, y, z = obs
+            drone_position = obs[0]  # 상태 배열의 첫 번째 행이 드론의 위치
+            x, y, z = drone_position
             positions_x.append(x)
             positions_y.append(y)
             positions_z.append(z)
@@ -83,7 +85,7 @@ def test():
             print(f"Episode {episode+1} | Step {step} | Reward: {reward:.2f} | Position: (X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f})")
 
             if done:
-                print(f"[INFO] 목표 도달! {step+1} 스텝 만에 완료!!")
+                print(f"[INFO] 에피소드 종료")
                 break  # 목표 도달하면 바로 종료
 
         all_positions.append((positions_x, positions_y, positions_z))
