@@ -12,6 +12,9 @@ def train_ppo(env):
             model = PPO.load(config.MODEL_PATH, env=env)
         else:
             print("[INFO] 새로운 모델 생성...")
+            # 저장할 폴더가 없으면 생성
+            os.makedirs(os.path.dirname(config.MODEL_PATH), exist_ok=True)
+            
             model = PPO(config.PPO_POLICY, env, verbose=1, 
                         n_steps=config.PPO_N_STEPS, 
                         batch_size=config.PPO_BATCH_SIZE, 

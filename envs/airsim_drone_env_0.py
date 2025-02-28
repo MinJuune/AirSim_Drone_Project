@@ -48,7 +48,7 @@ class AirSimDroneEnv(gym.Env):
         self.client.enableApiControl(True)
         self.client.armDisarm(True)
 
-        self.client.moveToPositionAsync(0, 0, -2, 1).join()
+        self.client.moveToPositionAsync(0, 0, -1, 1).join()
         self.client.takeoffAsync().join()
 
         self.step_count = 0
@@ -70,14 +70,8 @@ class AirSimDroneEnv(gym.Env):
         print(f"[DEBUG] Action Taken: {action}")
         state = self._get_state()
         vx, vy, vz, yaw_rate = map(float, action)
-        self.client.moveByVelocityAsync(vx, vy, vz, duration=1).join()
+        self.client.moveByVelocityAsync(vx, vy, vz, duration=0.5).join() # 1초 너무 길수도 있어서 줄여. 학습속도 향상.
         new_state = self._get_state()
-
-        # 충돌 감지
-        collision_info = self.client.simGetCollisionInfo()
-        if collision_info.has_collided:
-            print(f"[DEBUG] 충돌 발생!")
-            return new_state, config.REWARD_COLLISION, True, {}  # 충돌 시 패널티 적용 후 종료
 
         prev_distance = np.linalg.norm(state[:3] - self.target_pos)
         current_distance = np.linalg.norm(new_state[:3] - self.target_pos)
@@ -87,15 +81,25 @@ class AirSimDroneEnv(gym.Env):
         return new_state, reward, done, {}
 
     def calculate_reward(self, prev_distance, current_distance, new_state):
-        """보상 계산 로직"""
-
-        if self.step_in_episode >= 5:
-            print("[DEBUG] 에피소드 내 최대 스텝 초과 - 에피소드 종료")
+        '''
+        보상 계산 로직
+        1) 최대 스텝 초과 시 패널티 + done
+        2) 목표 도달 시 큰 보상 + done
+        3) 안전 경계 이탈 시 패널티 + done
+        4) 기본 스텝 패널티
+        5) 목표와의 거리 변화(Shaping)
+        6) 장애물 근접 패널티 (or 안전 거리 유지 보상)
+        7) 그 외 step_in_episode 증가 후 반환
+        '''
+        # 충돌 감지
+        collision_info = self.client.simGetCollisionInfo()
+        if collision_info.has_collided:
+            print(f"[DEBUG] 충돌 발생!")
             self.step_in_episode = 0
-            return config.REWARD_MAX_STEP_EXCEED, True
-
+            return config.REWARD_COLLISION, True  # 충돌 시 패널티 적용 후 종료
+        
         # 최대 스텝을 초과하면 패널티 적용 후 종료
-        if self.step_count >= self.max_steps:
+        if self.step_in_episode >= self.max_steps:
             print("[DEBUG] 최대 스텝 초과 - 에피소드 종료")
             self.step_in_episode = 0
             return config.REWARD_MAX_STEP_EXCEED, True  # 최대 스텝 초과하면 즉시 종료
@@ -107,10 +111,13 @@ class AirSimDroneEnv(gym.Env):
             return config.REWARD_GOAL, True  # 목표 도달하면 즉시 종료
 
         # 경계를 벗어나면 즉시 종료
-        if np.any(np.abs(new_state[:3]) > self.safe_bound):
-            print(f"[DEBUG] 안전 경계 초과! 현재 위치: {new_state}")
+        center = np.array([0.0, 0.0, -2.0])  # 구(원형) 경계의 중심점
+        drone_position = new_state[0]        # 드론 위치 (x, y, z)
+        distance_from_center = np.linalg.norm(drone_position - center)
+        if distance_from_center > self.safe_bound:
+            print("[DEBUG] 구(원형) 경계 이탈!")
             self.step_in_episode = 0
-            return config.REWARD_OUT_OF_BOUNDS, True  # 안전 경계를 벗어나면 즉시 종료
+            return config.REWARD_OUT_OF_BOUNDS, True
 
         # 기본 보상 설정
         reward = config.REWARD_STEP
@@ -118,10 +125,10 @@ class AirSimDroneEnv(gym.Env):
         # 목표 접근 여부에 따른 보상 계산
         distance_change = prev_distance - current_distance
         if distance_change > 0:
-            reward += config.REWARD_DISTANCE_GAIN * (distance_change ** 2)  # 거리 감소 시 보상을 제곱하여 가중치 부여
+            reward += config.REWARD_DISTANCE_GAIN * (distance_change ** 1.5)  # 거리 감소 시 보상을 1.5제곱(2는 너무 보상이 급격하게 변동-> 학습 불안정)
             print(f"[DEBUG] 목표 접근 | 보상 증가: {reward:.2f}")
         else:
-            reward += config.REWARD_DISTANCE_LOSS * (abs(distance_change) ** 2)  # 거리 증가 시 패널티 강화
+            reward += config.REWARD_DISTANCE_LOSS * (abs(distance_change) ** 1.5)  # 거리 증가 시 패널티 강화
             print(f"[DEBUG] 목표에서 멀어짐 | 패널티 적용: {reward:.2f}")
 
         self.step_in_episode += 1
