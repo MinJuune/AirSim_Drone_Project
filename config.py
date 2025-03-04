@@ -17,7 +17,7 @@ ACTION_SPACE_HIGH = np.array([3, 3, 1, 30])  # 행동 최대값
 PPO_N_STEPS = 64  # 학습 시 하나의 배치에서 사용하는 스텝 수
 PPO_BATCH_SIZE = 16  # 미니배치 크기
 PPO_N_EPOCHS = 5  # 학습 반복 횟수
-PPO_POLICY = "MlpPolicy"  # 사용되는 정책 네트워크
+PPO_POLICY = "MultiInputPolicy"  # 사용되는 정책 네트워크
 
 # 보상 관련 설정
 REWARD_GOAL = 100  # 목표 도달 보상
@@ -31,7 +31,7 @@ REWARD_COLLISION = -50 # 충돌 패널티
 # 학습 모델 저장 경로
 # MODEL_PATH = "ppo_airsim_drone_policy3.zip" # 이거는 state가 3일때임(x,y,z 위치정보)
 MODEL_PATH = "weights/ppo_airsim_lidar_sensor.zip" # 이거는 state가 81일때(위치+라이다)
-TOTAL_TIMESTEPS = 5000  # 학습할 총 스텝 수
+TOTAL_TIMESTEPS = 3000  # 학습할 총 스텝 수
 
 TEST_EPISODE_STEPS = 20  # 테스트 실행 시 반복할 스텝 수
 

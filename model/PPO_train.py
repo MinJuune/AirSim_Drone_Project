@@ -2,6 +2,7 @@ from stable_baselines3 import PPO
 from callbacks import CustomCallback
 import os
 import config
+import traceback
 
 def train_ppo(env):
     """PPO 모델 학습 함수"""
@@ -29,5 +30,6 @@ def train_ppo(env):
 
     except Exception as e:
         print(f"[ERROR] PPO 학습 중 오류 발생: {e}")
+        traceback.print_exc()
 
     return model  # ✅ 학습된 모델 반환
