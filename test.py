@@ -6,11 +6,12 @@ from mpl_toolkits.mplot3d import Axes3D  # 3D 그래프
 from stable_baselines3 import PPO
 from envs.airsim_drone_env_0 import AirSimDroneEnv
 import keyboard
+import airsim
+from config import TEST_EPISODE_STEPS, TEST_MAX_EPISODES
 
 # MODEL_PATH = "ppo_airsim_drone_policy3.zip"
 MODEL_PATH = "weights/ppo_airsim_lidar_sensor.zip"
-MAX_EPISODES = 5  # 여러 번 테스트해서 평균 성능 평가
-MAX_STEPS = 200  # 한 에피소드에서 최대 스텝 수 (무한 루프 방지)
+
 
 # False: PPO 자동 조종 / True: 키보드 수동 조종
 manual_mode = False 
@@ -58,12 +59,12 @@ def test():
     episode_rewards = []  # 에피소드별 총 보상 저장
     episode_steps = []  # 목표 도달까지 걸린 스텝 수 저장
 
-    for episode in range(MAX_EPISODES):
+    for episode in range(TEST_MAX_EPISODES):
         obs = env.reset()
         positions_x, positions_y, positions_z = [], [], []
         total_reward = 0
 
-        for step in range(MAX_STEPS):
+        for step in range(TEST_EPISODE_STEPS):
             if keyboard.is_pressed('space'):
                 manual_mode = True  
                 print("[WARNING] 수동 조종 모드 활성화! 키보드로 조종하세요!!")
@@ -75,7 +76,11 @@ def test():
             obs, reward, done, _ = env.step(action)
 
             # 현재 위치 저장
-            drone_position = obs[0]  # 상태 배열의 첫 번째 행이 드론의 위치
+
+            multirotor_state = env.client.getMultirotorState()
+            pos = multirotor_state.kinematics_estimated.position
+            drone_position = np.array([pos.x_val, pos.y_val, pos.z_val], dtype=np.float32)
+
             x, y, z = drone_position
             positions_x.append(x)
             positions_y.append(y)

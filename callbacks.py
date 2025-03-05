@@ -60,7 +60,10 @@ class CustomCallback(BaseCallback):
             lidar_points = np.array(obs["lidar_points"])  # numpy 배열로 변환
             lidar_points = np.squeeze(lidar_points)  # (1,80,3) → (80,3)으로 변환
             lidar_points_count = lidar_points.shape[0]  # LiDAR 포인트 개수 확인
-            drone_position = obs["drone_position"].tolist()  # 드론 위치 저장 가능하도록 리스트로 변환
+            
+            multirotor_state = self.client.getMultirotorState()
+            pos = multirotor_state.kinematics_estimated.position
+            drone_position = np.array([pos.x_val, pos.y_val, pos.z_val], dtype=np.float32)
 
             # LiDAR 데이터 저장 (JSON 형식)
             filename = os.path.join(self.save_path, f"timestep_{lidar_step:06d}.json")

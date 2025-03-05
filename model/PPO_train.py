@@ -22,7 +22,8 @@ def train_ppo(env):
                         n_epochs=config.PPO_N_EPOCHS)
 
         print("[INFO] 모델 학습 시작...")
-        model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=CustomCallback())  # ✅ 콜백 사용
+        # model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=CustomCallback())  
+        model.learn(total_timesteps=config.TOTAL_TIMESTEPS)  
         model.save(config.MODEL_PATH)
         print(f"[INFO] 모델 저장 완료: {config.MODEL_PATH}")
        
